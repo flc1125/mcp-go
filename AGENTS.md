@@ -25,6 +25,9 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - **Lint**: `golangci-lint run` (uses .golangci.yml config)
 - **Generate**: `go generate ./...` (regenerates hooks and request handlers)
 
+# Git
+- **Verified commits**: When possible, make verified (signed) commits using GPG, SSH, or S/MIME signing keys
+
 # Code Style
 - **Imports**: Standard library first, then third-party, then local packages (goimports handles this)
 - **Naming**: Use Go conventions - exported names (PascalCase), unexported names (camelCase), acronyms uppercase (HTTP, JSON, MCP)
