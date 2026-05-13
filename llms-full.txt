@@ -5317,6 +5317,27 @@ mcp.Icon{
 }
 ```
 
+#### Theme-Specific Icons
+
+Icons can optionally declare which background theme they're designed for. Clients use the hint to pick the right asset when rendering against a light or dark UI:
+
+```go
+icons := []mcp.Icon{
+    {
+        Src:      "https://example.com/icons/tool-light.svg",
+        MIMEType: "image/svg+xml",
+        Theme:    mcp.IconThemeLight,    // Designed for light backgrounds
+    },
+    {
+        Src:      "https://example.com/icons/tool-dark.svg",
+        MIMEType: "image/svg+xml",
+        Theme:    mcp.IconThemeDark,     // Designed for dark backgrounds
+    },
+}
+```
+
+The `Theme` field is optional — an icon without a theme is treated as theme-agnostic. The supported constants are `mcp.IconThemeLight` and `mcp.IconThemeDark`; unknown values are passed through unchanged for forward compatibility.
+
 Explore powerful features that make MCP-Go servers production-ready: typed tools, session management, middleware, hooks, and more.
 
 ### Typed Tools
@@ -7723,6 +7744,24 @@ prompt := mcp.NewPrompt("code_review",
 )
 ```
 
+#### Display Title
+
+Prompts and their arguments can carry a human-readable display title. Clients render the title in pickers and UI surfaces; the `name` stays a stable programmatic identifier.
+
+```go
+prompt := mcp.NewPrompt("code_review",
+    mcp.WithPromptTitle("Code Review"),                            // Shown in UI
+    mcp.WithPromptDescription("Review code for best practices"),
+    mcp.WithArgument("code",
+        mcp.ArgumentTitle("Source Code"),                          // Argument display name
+        mcp.ArgumentDescription("The code to review"),
+        mcp.RequiredArgument(),
+    ),
+)
+```
+
+When `Title` is empty, clients fall back to `Name`. Both fields serialise with `omitempty`, so existing prompts that don't set a title are unchanged on the wire.
+
 ### Prompt Templates
 
 #### Basic Code Review Prompt
@@ -8370,6 +8409,46 @@ resource := mcp.NewResource(
     ),
 )
 ```
+
+#### Display Title
+
+Resources and resource templates can carry a human-readable display title separate from the `name`. Clients show the title in file browsers and pickers; `name` remains a stable identifier suitable for programmatic lookup.
+
+```go
+resource := mcp.NewResource(
+    "docs://readme",
+    "readme.md",                                          // name (stable identifier)
+    mcp.WithResourceTitle("Project README"),              // Shown in UI
+    mcp.WithResourceDescription("Main project documentation"),
+    mcp.WithMIMEType("text/markdown"),
+)
+
+// Same option exists on resource templates
+template := mcp.NewResourceTemplate(
+    "users://{user_id}",
+    "user-profile",
+    mcp.WithTemplateTitle("User Profile"),
+    mcp.WithTemplateDescription("Profile information for a specific user"),
+)
+```
+
+If `Title` is empty, clients fall back to `Name`. The field serialises with `omitempty`, so resources that don't set a title are unchanged on the wire.
+
+#### Resource Size
+
+When the raw byte size of a resource is known in advance, set it so hosts can render file sizes and pre-budget context-window usage without fetching the body:
+
+```go
+resource := mcp.NewResource(
+    "file:///var/log/app.log",
+    "app.log",
+    mcp.WithResourceTitle("Application Log"),
+    mcp.WithMIMEType("text/plain"),
+    mcp.WithResourceSize(2_048_576),    // 2 MiB, measured before base64 encoding
+)
+```
+
+`Size` is exposed as `*int64` on the `Resource` struct so an explicit zero-byte resource is distinguishable from an unknown size. Omit `WithResourceSize` entirely when the size is unknown.
 
 ### Static Resources
 
@@ -9522,6 +9601,26 @@ tool := mcp.NewTool("calculate",
 ```
 
 ### Tool Definition
+
+#### Display Title
+
+Tools can carry a human-readable display title separate from their programmatic `name`. Clients display titles in tool pickers and UI surfaces; the `name` is reserved for model-facing identifiers.
+
+```go
+tool := mcp.NewTool("calculate_arithmetic",
+    mcp.WithToolTitle("Calculator"),               // Shown in UI
+    mcp.WithDescription("Perform arithmetic operations"),
+    // ... parameters
+)
+```
+
+Per the [MCP spec](https://modelcontextprotocol.io/specification/2025-06-18/server/tools), clients should resolve the display label in this order:
+
+1. `Title` (the top-level field set by `WithToolTitle`)
+2. `Annotations.Title` (legacy hint set by `WithTitleAnnotation`, see [Tool Annotations](#tool-annotations))
+3. `Name`
+
+Both fields are optional; omitting them falls back to the next candidate.
 
 #### Tool Icons
 
